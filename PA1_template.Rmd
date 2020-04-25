@@ -1,25 +1,132 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: 'Reproducible Research: Peer Assessment 1'
+author: "João Pedro"
+date: "25/04/2020"
+output: html_document
+keep_md: TRUE
 ---
 
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
-## Loading and preprocessing the data
+## 1. Loading the data
+```{r, results='hide'}
+library(readr)
+setwd("C:/Users/mcjpe/Desktop/João Pedro/Ciência de Dados/Tarefa 1 - Pesquisa Reprodusível")
+data <- read_csv("activity.csv", na = 'NA')
+```
 
+## 2. Average of total steps taken per day
+Firt, remove the NA's values from the data:
+```{r, results='hide'}
+data0 <- data[(!is.na(data$steps)),]
+```
+With this new data, calculate the sum of all steps per day and make a histogram of this results:
+```{r}
+stpd <- with(data0, tapply(steps, date, sum))
+summary(stpd)
+#png("Plot1.png")
+hist(stpd, 
+     main = 'Steps Taken Per Day', 
+     xlab = 'Steps', 
+     col = 'red', 
+     breaks = length(stpd)/2)
+#dev.off()
+```
 
+## 3. Daily activity average pattern
+Initially, calculate the average steps per time interval using the data without NA's and create a new DataFrame with the results:
+```{r}
+step <- (with(data0, tapply(steps, interval, mean)))
+name <- names(step)
+stpm <- as.data.frame(step)
+stpm$interval <- name
+```
+After that, calculate the maximum average value and get the time interval that's occur:
+```{r}
+maxm <- stpm[max(stpm$step),]
+maxm <- as.numeric(maxm$interval)
+maxm
+```
+Finally, plot the results:
+```{r}
+#png("Plot2.png")
+plot(stpm$interval, stpm$step,
+     main = 'Average Steps Taken Per 5 Minutes Interval', 
+     xlab = 'Interval', 
+     ylab = 'Steps', 
+     type = 'l',
+     lwd = 2,
+     col = 'blue')
+#dev.off()
+```
 
-## What is mean total number of steps taken per day?
+## 4. Imputing missing values
+Find the NA's values and insert the average steps in the correspond interval, after, create a new DataFrame:
+```{r}
+narow <- data[is.na(data$steps),]
+narow <- split(narow, narow$date)
+for (a in 1:length(narow)) {narow[[a]]$steps <- step}
+narow <- do.call(rbind,narow)
+data1 <- data
+data1[is.na(data1$steps),] <- narow
+```
+With the new DataFrame, calculate the sum of the steps per day and plot the results. For compare the data with NA's values and without, make a panel plot:
+```{r}
+stpd1 <- with(data1, tapply(steps, date, sum))
+summary(stpd1)
+#png("Plot3.png")
+par(mfcol = c(1,2))
+hist(stpd, 
+     main = 'Steps Taken Per Day \n(without NA)', 
+     xlab = 'Steps', 
+     col = 'red', 
+     breaks = length(stpd)/2)
+hist(stpd1, 
+     main = 'Steps Taken Per Day \n(with NA)', 
+     xlab = 'Steps', 
+     col = 'green', 
+     breaks = length(stpd1)/2)
+#dev.off()
+```
 
+## 5. Differences in activity patterns between weekdays and weekends
+First, separe the weekdays and the weekends in two DataFrames:
+```{r}
+data2 <- data1
+data2$week <- as.character(weekdays(data2$date, abbreviate = TRUE))
+data2[(data2$week == c("dom", "sab")),]$week <- "Weekend"
+data2[(data2$week != "Weekend"),]$week <- "Weekday"
+data2 <- split(data2, data2$week)
+```
+After that, do the same analysis did in step 3 for the two new DataFrames and plot the results in a panel plot:
+```{r}
+stwk <- with(data2[[1]], tapply(steps, interval, mean))
+nmwk <- names(stwk)
+stwk <- as.data.frame(stwk)
+stwk$interval <- nmwk
 
+stwe <- with(data2[[2]], tapply(steps, interval, mean))
+nmwe <- names(stwe)
+stwe <- as.data.frame(stwe)
+stwe$interval <- nmwe
 
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
+#png("Plot4.png")
+par(mfrow = c(2,1))
+plot(stwk$interval, stwk$stwk,
+     main = 'Average Steps Taken Per 5 Minutes Interval (Weekday)', 
+     xlab = 'Minutes', 
+     ylab = 'Average Steps', 
+     type = 'l',
+     lwd = 2,
+     col = 'cyan')
+plot(stwe$interval, stwe$stwe,
+     main = 'Average Steps Taken Per 5 Minutes Interval (Weekend)', 
+     xlab = 'Minutes', 
+     ylab = 'Average Steps', 
+     type = 'l',
+     lwd = 2,
+     col = 'orange')
+#dev.off()
+```
